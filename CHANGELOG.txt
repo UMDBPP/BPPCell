@@ -1,0 +1,4 @@
+Version 0.5 - 9 May 2015
+	- Initial release
+	- Known issues:
+		- Decimal degree GPS format is known not work

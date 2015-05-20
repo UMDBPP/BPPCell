@@ -29,6 +29,22 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+struct DMSCoords {
+	int latDegs;
+	int latMins;
+	float latSecs;
+	int lonDegs;
+	int lonMins;
+	float lonSecs;
+	bool isNorth;
+	bool isEast;
+};
+
+struct DecDegsCoords {
+	float lat;
+	float lon;
+};
+
 class GPSCoords {
 	public:
 		GPSCoords(String time, long lat, long lon, float alt);
@@ -45,9 +61,9 @@ class GPSCoords {
 		const int SECONDS_PER_MINUTE = 60;
 		String formatCoordsForText(int format);
 		String getFormattedTimeString();
-		void getLatLonInDMS(String DMSArray[]);
-		void getLatLonInDecDegs(String coordArray[]);
-		
+		DMSCoords getLatLonInDMS();
+		DecDegsCoords getLatLonInDecDegs();
+		/*
 		// Describe the structure for degree-minute-second format
 		const int DMS_LAT_DEG_INDEX = 0;
 		const int DMS_LAT_MIN_INDEX = 1;
@@ -60,6 +76,7 @@ class GPSCoords {
 		// Describe the structure of decimal degree format
 		const int DEC_DEGS_LAT_INDEX = 0;
 		const int DEC_DEGS_LON_INDEX = 1;
+		*/
 		
 		// Specify the various formats
 		const static int FORMAT_DMS = 1;

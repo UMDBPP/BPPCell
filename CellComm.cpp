@@ -68,8 +68,8 @@ String CellComm::getMessages() {
 		s += buffer;
 		delay(100);
 	}
-	Serial3.println("Messages are: ");
-	Serial3.println(s);
+	//Serial3.println("Messages are: ");
+	//Serial3.println(s);
 	return s;
 }
 

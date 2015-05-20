@@ -70,21 +70,30 @@ String GPSCoords::formatCoordsForText(int format) {
 	String returnString = "";
 	switch (format) {
 		case FORMAT_DMS: {
-			String DMSArray[] = {"", "", "", "", "", ""};
-			getLatLonInDMS(DMSArray);
+			DMSCoords coords = getLatLonInDMS();
 			returnString += ("Time: " + getFormattedTimeString() + " UTC\n");
-			returnString += ("Lat: " + DMSArray[DMS_LAT_DEG_INDEX] + char(0xB0) + " ");
-			returnString += (DMSArray[DMS_LAT_MIN_INDEX] + "' ");
-			returnString += (DMSArray[DMS_LAT_SEC_INDEX] + "\" ");
-			if(getLat() >= 0) 
+			returnString += "Lat: ";
+			returnString += coords.latDegs;
+			returnString += char(0xB0);
+			returnString += " ";
+			returnString += coords.latMins;
+			returnString += "' ";
+			returnString += coords.latSecs;
+			returnString += "\" ";
+			if(coords.isNorth) 
 				returnString += "N";
 			else
 				returnString += "S";
 			returnString += "\n";
-			returnString += ("Lon: " + DMSArray[DMS_LON_DEG_INDEX] + char(0xB0) + " ");
-			returnString += (DMSArray[DMS_LON_MIN_INDEX] + "' ");
-			returnString += (DMSArray[DMS_LON_SEC_INDEX] + "\" ");
-			if(getLon() >= 0) 
+			returnString += "Lon: ";
+			returnString += coords.lonDegs;
+			returnString += char(0xB0);
+			returnString += " ";
+			returnString += coords.lonMins;
+			returnString += "' ";
+			returnString += coords.lonSecs;
+			returnString += "\" ";
+			if(coords.isEast) 
 				returnString += "E";
 			else
 				returnString += "W";
@@ -93,83 +102,110 @@ String GPSCoords::formatCoordsForText(int format) {
 			break;
 		}
 		case FORMAT_DMS_ONELINE: {
-			String DMSArray[] = {"", "", "", "", "", ""};
-			getLatLonInDMS(DMSArray);
-			returnString += ("Time: " + getFormattedTimeString() + " UTC,");
-			returnString += ("Lat: " + DMSArray[DMS_LAT_DEG_INDEX] + char(0xB0) + " ");
-			returnString += (DMSArray[DMS_LAT_MIN_INDEX] + "' ");
-			returnString += (DMSArray[DMS_LAT_SEC_INDEX] + "\" ");
-			if(getLat() >= 0) 
+			DMSCoords coords = getLatLonInDMS();
+			returnString += ("Time: " + getFormattedTimeString() + " UTC");
+			returnString += "Lat: ";
+			returnString += coords.latDegs;
+			returnString += char(0xB0);
+			returnString += " ";
+			returnString += coords.latMins;
+			returnString += "' ";
+			returnString += coords.latSecs;
+			returnString += "\" ";
+			if(coords.isNorth) 
 				returnString += "N";
 			else
 				returnString += "S";
-			returnString += ",";
-			returnString += ("Lon: " + DMSArray[DMS_LON_DEG_INDEX] + char(0xB0) + " ");
-			returnString += (DMSArray[DMS_LON_MIN_INDEX] + "' ");
-			returnString += (DMSArray[DMS_LON_SEC_INDEX] + "\" ");
-			if(getLon() >= 0) 
+			returnString += "Lon: ";
+			returnString += coords.lonDegs;
+			returnString += char(0xB0);
+			returnString += " ";
+			returnString += coords.lonMins; 
+			returnString += "' ";
+			returnString += coords.lonSecs;
+			returnString += "\" ";
+			if(coords.isEast) 
 				returnString += "E";
 			else
 				returnString += "W";
-			returnString += ",";
 			returnString += (String("Alt: ") + getAlt() + "m MSL");
 			break;
 		}
 		case FORMAT_DEC_DEGS: {
-			String coordsArray[] = {"                 ", "                    "};
-			getLatLonInDecDegs(coordsArray);
-			Serial.println("Constructing return string");
-			returnString += ("Time: " + getFormattedTimeString() + " UTC\n");
-			returnString += ("Lat: " + coordsArray[DEC_DEGS_LAT_INDEX] + char(0xB0) + "\n");
-			returnString += ("Lon: " + coordsArray[DEC_DEGS_LON_INDEX] + char(0xB0) + "\n");
-			//returnString += (String("Alt: ") + getAlt() + "m MSL\n");
+			DecDegsCoords coords = getLatLonInDecDegs();
+			String decLatString = "";
+			String decLonString = "";
+			const int lengthOfDecLatString = 9;
+			const int lengthOfDecLonString = 10;
+			char decLatStrArray[lengthOfDecLatString];
+			char decLonStrArray[lengthOfDecLonString];
+			dtostrf(coords.lat,lengthOfDecLatString,6, decLatStrArray);
+			dtostrf(coords.lon,lengthOfDecLonString,6, decLonStrArray);
+			decLatString += decLatStrArray;
+			decLonString += decLonStrArray;
+			returnString += ("Time: " + getFormattedTimeString() + " UTC \n");
+			returnString += "Lat: ";
+			returnString += decLatString;
+			returnString += char(0xB0);
+			returnString += "\n";
+			returnString += "Lon: ";
+			returnString += decLonString;
+			returnString += char(0xB0);
+			returnString += "\n";
 			returnString += "Alt: ";
 			returnString += getAlt();
 			returnString += "m MSL\n";
-			Serial.println("here");
-			Serial.println("Finished constructing return string");
 			break;
 		}
-		/*
+		
 		case FORMAT_DEC_DEGS_CSV: {
-			String coordsArray[] = {"", ""};
-			getLatLonInDecDegs(coordsArray);
-			//Serial.println("Constructing return string");
-			returnString += getFormattedTimeString();
+			DecDegsCoords coords = getLatLonInDecDegs();
+			String decLatString = "";
+			String decLonString = "";
+			const int lengthOfDecLatString = 9;
+			const int lengthOfDecLonString = 10;
+			char decLatStrArray[lengthOfDecLatString];
+			char decLonStrArray[lengthOfDecLonString];
+			dtostrf(coords.lat,lengthOfDecLatString,6, decLatStrArray);
+			dtostrf(coords.lon,lengthOfDecLonString,6, decLonStrArray);
+			decLatString += decLatStrArray;
+			decLonString += decLonStrArray;
+			returnString += (getFormattedTimeString() + ",");
+			returnString += decLatString;
 			returnString += ",";
-			returnString += coordsArray[DEC_DEGS_LAT_INDEX];
-			returnString += ",";
-			returnString += coordsArray[DEC_DEGS_LON_INDEX];
+			returnString += decLonString;
 			returnString += ",";
 			returnString += getAlt();
-			returnString += char(0xD);
-			returnString += char(0xA);
-			//Serial.println("here");
-			//Serial.println("Finished constructing return string");
-			break;
 			break;
 		}
-		*/
+		
 		case FORMAT_DMS_CSV: {
-			String DMSArray[] = {"", "", "", "", "", ""};
-			getLatLonInDMS(DMSArray);
-			if(getLat() <= 0) 
+			DMSCoords coords = getLatLonInDMS();
+			if(!coords.isNorth) 
 				returnString += "-";
-			returnString += (getFormattedTimeString() + ",");
-			returnString += (DMSArray[DMS_LAT_DEG_INDEX] + ",");
-			returnString += (DMSArray[DMS_LAT_MIN_INDEX] + ",");
-			returnString += (DMSArray[DMS_LAT_SEC_INDEX] + ",");
+			returnString += getFormattedTimeString();
+			returnString += ",";
+			returnString += coords.latDegs;
+			returnString += ",";
+			returnString += coords.latMins;
+			returnString += ",";
+			returnString += coords.latSecs;
+			returnString += ",";
 
-			if(getLon() <= 0) 
+			if(!coords.isEast) 
 				returnString += "-";
-			returnString += (DMSArray[DMS_LON_DEG_INDEX] + ",");
-			returnString += (DMSArray[DMS_LON_MIN_INDEX] + ",");
-			returnString += (DMSArray[DMS_LON_SEC_INDEX] + ",");
+			returnString += coords.lonDegs;
+			returnString += ",";
+			returnString += coords.lonMins;
+			returnString += ",";
+			returnString += coords.lonSecs;
+			returnString += ",";
 
 			returnString += (getAlt());
 			break;
 		}
 	}
+	// Uncomment the line below to enable debug output
 	//Serial3.println(returnString);
 	return returnString;
 }
@@ -178,28 +214,42 @@ String GPSCoords::formatCoordsForText(int format) {
 /* Updates the DMSArray to the current coordinate values in degrees, minutes, and seconds
  * DMSArray has six fields. In order: lat degs, lat mins, lat secs, lon degs, lon mins, lon secs
  */
-void GPSCoords::getLatLonInDMS(String DMSArray[]) {
+DMSCoords GPSCoords::getLatLonInDMS(void) {
+	DMSCoords coords;
 	long localLat = abs(_lat);
 	long localLon = abs(_lon);
 	
 	int latDegs = (int) (localLat/(MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE));
 	localLat = localLat % (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LAT_DEG_INDEX] += latDegs;
+	coords.latDegs = latDegs;
 	int lonDegs = (int) (localLon/(MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE));
 	localLon = localLon % (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LON_DEG_INDEX] += lonDegs;
+	coords.lonDegs = lonDegs;
 	
 	int latMins = (int) (localLat/TEN_THOUSANDTHS_PER_MINUTE);
 	localLat = localLat % (TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LAT_MIN_INDEX] += latMins;
+	coords.latMins = latMins;
 	int lonMins = (int) (localLon/TEN_THOUSANDTHS_PER_MINUTE);
 	localLon = localLon % (TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LON_MIN_INDEX] += lonMins;
+	coords.lonMins = lonMins;
 	
 	float latSecs = ((float) (localLat*SECONDS_PER_MINUTE)/TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LAT_SEC_INDEX] += latSecs;
+	coords.latSecs = latSecs;
 	float lonSecs = ((float) (localLon*SECONDS_PER_MINUTE)/TEN_THOUSANDTHS_PER_MINUTE);
-	DMSArray[DMS_LON_SEC_INDEX] += lonSecs;
+	coords.lonSecs = lonSecs;
+	if(_lat >= 0)
+		coords.isNorth = true;
+	else
+		coords.isNorth = false;
+	
+	if(_lon >= 0)
+		coords.isEast = true;
+	else
+		coords.isEast = false;
+	
+	
+	
+	return coords;
 }
 
 /* Gets the latitude and longitude in decimal degrees.
@@ -207,32 +257,13 @@ void GPSCoords::getLatLonInDMS(String DMSArray[]) {
  * Input is an array of floating point numbers containing at least two elements. The method will not function properly if the input array does not have at least two elements.
  * Method populates the first and second elements of the input array with the latitude and longitude, respectively, of the coordinates.
  */
-void GPSCoords::getLatLonInDecDegs(String* coordsArray) {
+DecDegsCoords GPSCoords::getLatLonInDecDegs(void) {
+	DecDegsCoords coords;
 	float decLat = _lat/((float) MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
 	float decLon = _lon/((float) MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
-	String decLatString = "";
-	String decLonString = "";
-	const int lengthOfDecLatString = 10;
-	const int lengthOfDecLonString = 11;
-	const char space = char(0x20);
-	char decLatStrArray[lengthOfDecLatString];
-	char decLonStrArray[lengthOfDecLonString];
-	dtostrf(decLat,10,6, decLatStrArray);
-	dtostrf(decLon,11,6, decLonStrArray);
-	for(int i = 0; i < lengthOfDecLatString; i++) {
-		if(decLatStrArray[i] != space) {
-			decLatString += decLatStrArray[i];
-		}
-	}
-	for(int i = 0; i < lengthOfDecLonString; i++) {
-		if(decLonStrArray[i] != space) {
-			decLonString += decLonStrArray[i];
-		}
-	}
-	Serial3.print("DecLatString: ");
-	Serial3.println(decLatString);
-	coordsArray[0] = decLatString;
-	coordsArray[1] = decLonString;
+	coords.lat = decLat;
+	coords.lon = decLon;
+	return coords;
 }
 
 String GPSCoords::getFormattedTimeString() {

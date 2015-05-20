@@ -1,7 +1,7 @@
 /* NMEA GPS Coordinate Parser for Arduino and Ublox MAX 7Q
  * Developed for the Space Systems Laboratory at the University of Maryland
  * Part of the BPPCell library
- * See GitHub.com/UMDBPP/BPPCell or the accompanying readme for further details.
+..
  *
  * Copyright (c) 2015 Luke Renegar
  * 

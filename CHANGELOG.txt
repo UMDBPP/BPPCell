@@ -1,3 +1,9 @@
+Version 1.0 - 22 May 2015
+	- Signficantly refactored GPSCoords class
+		- Uses structures instead of arrays to return formatted coordinates
+	- Implemented decimal degree GPS coordinate format
+	- Known issues: none
+
 Version 0.5 - 9 May 2015
 	- Initial release
 	- Known issues:

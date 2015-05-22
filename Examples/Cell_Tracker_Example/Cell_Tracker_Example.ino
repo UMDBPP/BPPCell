@@ -8,7 +8,7 @@ CellComm comm;
 
 unsigned long lastMillisOfMessage = 0;
 bool sendingMessages = true;
-long timeInterval = 300000;
+long timeInterval = 300000; // In milliseconds; 300000 is 5 minutes
 const String number = ""; // put your cell number here, eg. number = "8001234567";
 
 void setup() {

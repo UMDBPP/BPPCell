@@ -98,15 +98,31 @@ class NMEAParser {
 		NMEAParser();
 		GPSCoords parseCoords(String GGAString);
 		String getGGAString();
+		String getNextLine();
+		int sendMessageToGNSS(byte address, byte* msg, int msgSize);
 		
-	private:
+	//private:
 		int _GNSS_ADDRESS;
+		int _DEFAULT_BYTES_TO_READ;
 		char _BUFFER_CHAR;
+		char _NEWLINE;
+		const byte _MU_LOWERCASE = 0xB5;
+		const byte _B_LOWERCASE = 0x62;
+		const byte _DOLLAR_SIGN = 0x24;
+		const byte _G_UPPERCASE = 0x47;
+		const byte _P_UPPERCASE = 0x50;
 		char readOneCharFromWire();
 		String readFromWire(int bytes);
+		String readFromWirePretty(int bytes);
 		char consumeBuffer();
 		long parseLatFromGGA(String latString, bool isNorth);
 		long parseLonFromGGA(String lonString, bool isEast);
+		byte calcChecksum(byte* msg, int msgLength);
+		void appendChecksum(byte* msg, int msgLength);
+		void consumeCurrentLine();
+		String getMessage(int timeout);
+		String readUBXMessageFromWire(int timeout);
+		String readNMEAMessageFromWire(byte messageTypeId, int timeout);
 };
 
 class CellComm {
@@ -115,8 +131,10 @@ class CellComm {
 		void setup();
 		void sendMessage(String number, String message);
 		int getCSQ();
-		String getMessages();
+		int getNumMessages();
+		String getMessage(int index);
 		bool deleteAllMessages();
+		int countOccurences(String stringToSearch, String target, int startingIndex = 0);
 		
 	private:
 		void readSerial();

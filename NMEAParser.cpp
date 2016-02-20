@@ -31,7 +31,10 @@
 NMEAParser::NMEAParser() {
 	Wire.begin();
 	_GNSS_ADDRESS = 66;
+	_DEFAULT_BYTES_TO_READ = 64;
 	_BUFFER_CHAR = char(0xFF);
+	_NEWLINE = '\n';
+	
 }
 
 GPSCoords NMEAParser::parseCoords(String GGAString) {
@@ -81,6 +84,25 @@ String NMEAParser::getGGAString() {
 	int endOfGGAIndex = readString.indexOf("$", GGAIndex + 1);
 	return readString.substring(GGAIndex, endOfGGAIndex);	
 }
+
+String NMEAParser::getNextLine()
+{
+	String returnString = "";
+	consumeCurrentLine();
+	
+	
+	return returnString;
+}
+
+int NMEAParser::sendMessageToGNSS(byte address, byte* msg, int msgLength) {
+  Wire.beginTransmission(address);
+  Wire.write(0xFF); // wakes GNSS
+  delay(100);
+  Wire.write(msg, msgLength);
+  Wire.endTransmission();
+  return 0;
+}
+
 /* Parses the latitude from an NMEA GGA string
  *
  *
@@ -123,12 +145,27 @@ String NMEAParser::readFromWire(int bytes) {
 	String s = "";
 	Wire.requestFrom(_GNSS_ADDRESS, bytes);
 	while(Wire.available()) { 
-		char c = Wire.read();
+        byte b = Wire.read();
+        char c = (char) b;
 		s += c;
 	}
 	return s;
 }
 
+String NMEAParser::readFromWirePretty(int bytes) {
+	String s = "";
+	Wire.requestFrom(_GNSS_ADDRESS, bytes);
+	while(Wire.available()) { 
+        byte b = Wire.read();
+        if(b != 255) // Ensures that the 'no data available' byte (0xFF) is not written
+        {
+          char c = (char) b; 
+           s += c;
+        }
+	}
+	return s;
+}
+	
 /* Consumes the buffer and returns the first non-buffer character */
 char NMEAParser::consumeBuffer() {
 	char c;
@@ -137,3 +174,158 @@ char NMEAParser::consumeBuffer() {
 	} while(c == _BUFFER_CHAR);
 	return c;
 }
+
+/* Calculates the Fletcher's Checksum of the given byte sequence and returns the result.
+ *
+ */
+byte NMEAParser::calcChecksum(byte* msg, int msgLength) {
+	byte sum = 0;
+	
+	for(int i = 0; i < msgLength; i++)
+	{
+		sum += msg[i];
+	}
+	
+	return sum;
+}
+
+void NMEAParser::appendChecksum(byte* msg, int msgLength)
+{
+
+	byte CK_A = 0;
+	byte CK_B = 0;
+	for(int i = 2; i< (msgLength - 2); i++)
+	{
+		CK_A = CK_A + msg[i];
+		CK_B = CK_B + CK_A;
+	}
+	
+	
+	msg[msgLength - 2] = CK_A;
+	msg[msgLength - 1] = CK_B;
+}
+
+void NMEAParser::consumeCurrentLine()
+{
+	const int BUFFER_SIZE = 128;
+	int bytesRead = 0;
+	do {
+		byte buffer[BUFFER_SIZE];
+		bytesRead = Wire.readBytesUntil(_NEWLINE, buffer, BUFFER_SIZE);
+	} while(bytesRead == BUFFER_SIZE);
+}
+
+String NMEAParser::getMessage(int timeout = 1000) {
+
+	
+	long startTime = millis();
+	byte b1 = 0;
+	byte b2 = 0;
+	while((millis() - startTime) < timeout) {
+		if(Wire.available() > 0) { // If bytes are available
+			b1 = b2;
+			b2 = Wire.read();
+			if((b1 == _MU_LOWERCASE) && (b2 == _B_LOWERCASE)) { // Check if it is a proprietary UBX message (0xB5 0x62)
+				readUBXMessageFromWire(timeout);
+			}
+			else if ((b1 == _DOLLAR_SIGN) && (b2 == _G_UPPERCASE)) { // Check if it is a GPS NMEA message ($G)
+				readNMEAMessageFromWire(_G_UPPERCASE, timeout);
+			}
+			else if((b1 == _DOLLAR_SIGN) && (b2 == _P_UPPERCASE)) { // Check if it is a properiatry U-blox NMEA message ($P)
+				readNMEAMessageFromWire(_P_UPPERCASE, timeout);
+			}
+		}
+		else { // Wait for a byte to become available
+			delay(50);
+			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+		}
+	}
+}
+
+/*
+ * Reads one UBX message from the I2C bus and returns it as a String.
+ * Assumes the first two characters (0xB5 0x62) have already been consumed from the bus.
+ * Timeout is in milliseconds.
+ */
+String NMEAParser::readUBXMessageFromWire(int timeout = 1000) {
+	String returnString = "";
+	long startTime = millis();
+	byte header[] = {0xB5, 0x62, 0x00, 0x00, 0x00, 0x00 }; // First two characters and four blank spaces for the rest of the header
+	int headerLength = 6;
+	int currentHeaderByteIndex = 2; // index in the header from which content is unknown, since the first two characters have been consumed
+	
+	// Gets the header of the message
+	while(((millis() - startTime) < timeout) && (currentHeaderByteIndex < headerLength)) {
+
+		if(Wire.available() > 0) { // If bytes are available
+			header[currentHeaderByteIndex] = Wire.read(); // Writes one byte to the header
+			currentHeaderByteIndex++;
+		}
+		else { // Wait for a byte to become available
+			delay(50);
+			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+		}
+	}
+	
+	// Writes the header to the return string
+	for(int i = 0; i < headerLength; i++) {
+		returnString += header[i];
+		returnString += ' ';
+	}
+	
+	int payloadLength = 256*header[5] + header[4]; // Gets the length of the payload by checking the length bytes, which are in Little Endian order
+	int currentPayloadIndex = 0; // Start at the beginning of the payload
+	
+	while(((millis() - startTime) < timeout) && (currentPayloadIndex < payloadLength)) {
+		if(Wire.available() > 0) { // If bytes are available
+			returnString += Wire.read();
+			returnString += ' ';
+			currentPayloadIndex++;			
+		}
+		else { // Wait for a byte to become available
+			delay(50);
+			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+		}
+	}
+	return returnString; // In the event of a timeout
+	
+}
+
+
+// Message type: G for gps, P for proprietary
+String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout = 1000) {
+	String returnString = "";
+	long startTime = millis();
+	
+	byte CR = 0x0D; // Carriage return
+	byte LF = 0x0A; // Line feed
+	
+	byte b1 = _DOLLAR_SIGN;
+	byte b2 = messageTypeId;
+	
+	returnString += ((char) b1);
+	
+	// Read bytes until the end of the message or the timeout is reached
+	while(((millis() - startTime) < timeout)) {
+		
+		if((b1 == CR) && (b2 == LF)) { // If the end of the message has been reached; write the endline to the string and break
+			returnString += ((char) b1);
+			returnString += ((char) b2);
+			break;
+		}
+
+		if(Wire.available() > 0) { // If bytes are available
+			b1 = b2;
+			returnString += b1; // TODO verify logic
+			b2 = Wire.read(); // Writes one byte to the header			
+		}
+		else { // Wait for a byte to become available
+			delay(50);
+			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+		}
+	}
+	
+	return returnString;
+}
+
+

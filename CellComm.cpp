@@ -54,22 +54,52 @@ void CellComm::sendMessage(String number, String message) {
 	readSerial();
 }
 
-/* Gets the messages waiting on the cell module.
- * This method may contain bugs. Use caution.
+/* Gets the number of messages waiting on the cell module.
  */
-String CellComm::getMessages() {
+int CellComm::getNumMessages() {
+	String keyString = "+CMGL";
 	Serial.println("AT+CMGL");
 	delay(100);
-	String s = "";
-	char buffer[64];
+	String prevString = "";
+	String currentString = "";
+	
+	int numMessages = 0;
 	while(Serial.available() > 0) {
+		char buffer[64];
+		int available = Serial.available();
+		Serial.readBytes(buffer, available);
+		prevString = currentString;
+		currentString = "";
+		currentString += buffer;
+		
+		String searchString = prevString + currentString;
+		numMessages += countOccurences(searchString, keyString, 0);
+		delay(20);
+	}
+	return numMessages;
+}
+
+/* Gets the message at the given index, if one exists. 
+ * Index must be strictly greater than 0 and less than or equal to the number of messages.
+ * If the index is invalid, returns the empty string.
+ */
+String CellComm::getMessage(int index) {
+	String command = "AT+CMGR=";
+	command += index;
+	Serial.println(command);
+	delay(100);
+	String s = "";
+	while(Serial.available() > 0) {
+		char buffer[64];
 		int available = Serial.available();
 		Serial.readBytes(buffer, available);
 		s += buffer;
-		delay(100);
+		delay(50);
 	}
-	//Serial3.println("Messages are: ");
-	//Serial3.println(s);
+	
+	String errorString = "+CMS ERROR: invalid memory index";
+	if(s.indexOf(errorString) < 0)
+		return "";
 	return s;
 }
 
@@ -87,6 +117,7 @@ bool CellComm::deleteAllMessages() {
 	Serial.readBytes(buffer, available);
 	String s = "";
 	s += buffer;
+	delete[] buffer;
 	if(s.indexOf("OK") > -1)
 		return true;
 	return false;
@@ -119,4 +150,15 @@ int CellComm::getCSQ() {
 		delay(5);
 	}
 	return CSQ;
+}
+
+/* Counts the number of occurences of target in stringToSearch occuring at or after startingIndex.
+ */
+int CellComm::countOccurences(String stringToSearch, String target, int startingIndex)
+{
+	int indexOfKey = stringToSearch.indexOf(target, startingIndex);
+	if(indexOfKey < 0) // Base case; target is not in stringToSearch at or after startingIndex
+		return 0;
+	else // Reduction; return 1 for this occurence plus the number of occurences in the rest of the string
+		return (1 + countOccurences(stringToSearch, target, (indexOfKey + 1)));
 }

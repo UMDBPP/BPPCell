@@ -215,8 +215,7 @@ void NMEAParser::consumeCurrentLine()
 	} while(bytesRead == BUFFER_SIZE);
 }
 
-String NMEAParser::getMessage(int timeout = 1000) {
-
+String NMEAParser::getMessage(int timeout) {
 	
 	long startTime = millis();
 	byte b1 = 0;
@@ -226,12 +225,15 @@ String NMEAParser::getMessage(int timeout = 1000) {
 			b1 = b2;
 			b2 = Wire.read();
 			if((b1 == _MU_LOWERCASE) && (b2 == _B_LOWERCASE)) { // Check if it is a proprietary UBX message (0xB5 0x62)
+				Serial3.println("case 1");
 				readUBXMessageFromWire(timeout);
 			}
 			else if ((b1 == _DOLLAR_SIGN) && (b2 == _G_UPPERCASE)) { // Check if it is a GPS NMEA message ($G)
+				Serial3.println("case 2");
 				readNMEAMessageFromWire(_G_UPPERCASE, timeout);
 			}
 			else if((b1 == _DOLLAR_SIGN) && (b2 == _P_UPPERCASE)) { // Check if it is a properiatry U-blox NMEA message ($P)
+				Serial3.println("case 3");
 				readNMEAMessageFromWire(_P_UPPERCASE, timeout);
 			}
 		}
@@ -247,7 +249,7 @@ String NMEAParser::getMessage(int timeout = 1000) {
  * Assumes the first two characters (0xB5 0x62) have already been consumed from the bus.
  * Timeout is in milliseconds.
  */
-String NMEAParser::readUBXMessageFromWire(int timeout = 1000) {
+String NMEAParser::readUBXMessageFromWire(int timeout) {
 	String returnString = "";
 	long startTime = millis();
 	byte header[] = {0xB5, 0x62, 0x00, 0x00, 0x00, 0x00 }; // First two characters and four blank spaces for the rest of the header
@@ -293,7 +295,7 @@ String NMEAParser::readUBXMessageFromWire(int timeout = 1000) {
 
 
 // Message type: G for gps, P for proprietary
-String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout = 1000) {
+String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout) {
 	String returnString = "";
 	long startTime = millis();
 	
@@ -303,14 +305,14 @@ String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout = 100
 	byte b1 = _DOLLAR_SIGN;
 	byte b2 = messageTypeId;
 	
-	returnString += ((char) b1);
+	returnString += ((unsigned char) b1);
 	
 	// Read bytes until the end of the message or the timeout is reached
 	while(((millis() - startTime) < timeout)) {
 		
 		if((b1 == CR) && (b2 == LF)) { // If the end of the message has been reached; write the endline to the string and break
-			returnString += ((char) b1);
-			returnString += ((char) b2);
+			returnString += ((unsigned char) b1);
+			returnString += ((unsigned char) b2);
 			break;
 		}
 
@@ -324,7 +326,7 @@ String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout = 100
 			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
 		}
 	}
-	
+	Serial3.println(returnString);
 	return returnString;
 }
 

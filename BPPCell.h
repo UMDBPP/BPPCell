@@ -106,11 +106,11 @@ class NMEAParser {
 		int _DEFAULT_BYTES_TO_READ;
 		char _BUFFER_CHAR;
 		char _NEWLINE;
-		const byte _MU_LOWERCASE = 0xB5;
-		const byte _B_LOWERCASE = 0x62;
-		const byte _DOLLAR_SIGN = 0x24;
-		const byte _G_UPPERCASE = 0x47;
-		const byte _P_UPPERCASE = 0x50;
+		 byte _MU_LOWERCASE;
+		 byte _B_LOWERCASE;
+		 byte _DOLLAR_SIGN;
+		 byte _G_UPPERCASE;
+		 byte _P_UPPERCASE;
 		char readOneCharFromWire();
 		String readFromWire(int bytes);
 		String readFromWirePretty(int bytes);

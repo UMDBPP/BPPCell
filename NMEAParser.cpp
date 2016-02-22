@@ -29,6 +29,11 @@
 #include <BPPCell.h>
 
 NMEAParser::NMEAParser() {
+	 _MU_LOWERCASE = 0xB5;
+	 _B_LOWERCASE = 0x62;
+	 _DOLLAR_SIGN = 0x24;
+	 _G_UPPERCASE = 0x47;
+	 _P_UPPERCASE = 0x50;
 	Wire.begin();
 	_GNSS_ADDRESS = 66;
 	_DEFAULT_BYTES_TO_READ = 64;
@@ -98,9 +103,9 @@ int NMEAParser::sendMessageToGNSS(byte address, byte* msg, int msgLength) {
   Wire.beginTransmission(address);
   Wire.write(0xFF); // wakes GNSS
   delay(100);
-  Wire.write(msg, msgLength);
+  int bytesSent = Wire.write(msg, msgLength);
   Wire.endTransmission();
-  return 0;
+  return bytesSent;
 }
 
 /* Parses the latitude from an NMEA GGA string
@@ -226,15 +231,15 @@ String NMEAParser::getMessage(int timeout) {
 			b2 = Wire.read();
 			if((b1 == _MU_LOWERCASE) && (b2 == _B_LOWERCASE)) { // Check if it is a proprietary UBX message (0xB5 0x62)
 				Serial3.println("case 1");
-				readUBXMessageFromWire(timeout);
+				return readUBXMessageFromWire(timeout);
 			}
 			else if ((b1 == _DOLLAR_SIGN) && (b2 == _G_UPPERCASE)) { // Check if it is a GPS NMEA message ($G)
 				Serial3.println("case 2");
-				readNMEAMessageFromWire(_G_UPPERCASE, timeout);
+				return readNMEAMessageFromWire(_G_UPPERCASE, timeout);
 			}
 			else if((b1 == _DOLLAR_SIGN) && (b2 == _P_UPPERCASE)) { // Check if it is a properiatry U-blox NMEA message ($P)
 				Serial3.println("case 3");
-				readNMEAMessageFromWire(_P_UPPERCASE, timeout);
+				return readNMEAMessageFromWire(_P_UPPERCASE, timeout);
 			}
 		}
 		else { // Wait for a byte to become available
@@ -242,6 +247,7 @@ String NMEAParser::getMessage(int timeout) {
 			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
 		}
 	}
+	return ""; // If the timeout is reached
 }
 
 /*
@@ -305,20 +311,26 @@ String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout) {
 	byte b1 = _DOLLAR_SIGN;
 	byte b2 = messageTypeId;
 	
-	returnString += ((unsigned char) b1);
+	char catChar = (char) b1; // TODO
+	returnString += catChar;
 	
 	// Read bytes until the end of the message or the timeout is reached
-	while(((millis() - startTime) < timeout)) {
+	while((millis() - startTime) < timeout) {
 		
 		if((b1 == CR) && (b2 == LF)) { // If the end of the message has been reached; write the endline to the string and break
-			returnString += ((unsigned char) b1);
-			returnString += ((unsigned char) b2);
+			catChar = (char) b1;
+			returnString += catChar;
+			catChar = (char) b2;
+			returnString += catChar;
 			break;
 		}
 
 		if(Wire.available() > 0) { // If bytes are available
 			b1 = b2;
-			returnString += b1; // TODO verify logic
+			if(b1 != CR) {
+				catChar = (char) b1;
+				returnString += catChar; // TODO verify logic
+			}
 			b2 = Wire.read(); // Writes one byte to the header			
 		}
 		else { // Wait for a byte to become available

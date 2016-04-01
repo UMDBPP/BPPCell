@@ -25,8 +25,9 @@
  */
 
 #include <Arduino.h>
-#include <Wire.h>
+//#include <Wire.h>
 #include <BPPCell.h>
+#include <I2C.h>
 
 NMEAParser::NMEAParser() {
 	 _MU_LOWERCASE = 0xB5;
@@ -34,10 +35,7 @@ NMEAParser::NMEAParser() {
 	 _DOLLAR_SIGN = 0x24;
 	 _G_UPPERCASE = 0x47;
 	 _P_UPPERCASE = 0x50;
-	Wire.begin();
-	_GNSS_ADDRESS = 66;
-	_DEFAULT_BYTES_TO_READ = 64;
-	_BUFFER_CHAR = char(0xFF);
+	_BUFFER_CHAR = char(BUFFER_CHAR_VALUE);
 	_NEWLINE = '\n';
 	
 }
@@ -83,7 +81,7 @@ String NMEAParser::getGGAString() {
 	String readString = "";
 	readString += consumeBuffer(); //Consumes the buffer and gets the first character
 	do {
-		readString += readFromWire(128);
+		readString += readFromI2C(128);
 	} while(readString.indexOf(_BUFFER_CHAR) == -1); //Ends loop when the next buffer is reached 
 	int GGAIndex = readString.indexOf("$GPGGA");
 	int endOfGGAIndex = readString.indexOf("$", GGAIndex + 1);
@@ -95,16 +93,16 @@ String NMEAParser::getNextLine()
 	String returnString = "";
 	consumeCurrentLine();
 	
-	
 	return returnString;
 }
 
-int NMEAParser::sendMessageToGNSS(byte address, byte* msg, int msgLength) {
-  Wire.beginTransmission(address);
-  Wire.write(0xFF); // wakes GNSS
+int NMEAParser::sendMessageToGNSS(byte address, byte* msg, int msgLength)
+{
+  I2c.begin();
+  I2c.write(GNSS_ADDRESS, GNSS_REGISTER, 0XFF); // wakes GNSS
   delay(100);
-  int bytesSent = Wire.write(msg, msgLength);
-  Wire.endTransmission();
+  int bytesSent = I2c.write(GNSS_ADDRESS, GNSS_REGISTER, msg, msgLength);
+  I2c.end();
   return bytesSent;
 }
 
@@ -112,7 +110,8 @@ int NMEAParser::sendMessageToGNSS(byte address, byte* msg, int msgLength) {
  *
  *
  */
-long NMEAParser::parseLatFromGGA(String latString, bool isNorth) {
+long NMEAParser::parseLatFromGGA(String latString, bool isNorth)
+{
 	int degrees = latString.substring(0, 2).toInt(); //Gets the degree component of the latitude
 	int minutes = latString.substring(2, 4).toInt(); //Gets the integral minutes component of the latitude
 	float decMinutes = latString.substring(4).toFloat(); //Gets the decimal minutes component of the latitude
@@ -126,7 +125,8 @@ long NMEAParser::parseLatFromGGA(String latString, bool isNorth) {
 	return NSMultiplier*(degrees*MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE + minutes*TEN_THOUSANDTHS_PER_MINUTE + ((long) (decMinutes*(TEN_THOUSANDTHS_PER_MINUTE))));
 }
 
-long NMEAParser::parseLonFromGGA(String lonString, bool isEast) {
+long NMEAParser::parseLonFromGGA(String lonString, bool isEast)
+{
 	int degrees = lonString.substring(0, 3).toInt(); //Gets the degree component of the longitude
 	int minutes = lonString.substring(3, 5).toInt(); //Gets the integral minutes component of the longitude
 	float decMinutes = lonString.substring(5).toFloat(); //Gets the decimal minutes component of the longitude
@@ -141,32 +141,55 @@ long NMEAParser::parseLonFromGGA(String lonString, bool isEast) {
 }
 
 
-char NMEAParser::readOneCharFromWire() {
-	Wire.requestFrom(_GNSS_ADDRESS, 1);
-	return Wire.read();	
+char NMEAParser::readOneCharFromI2C()
+{
+	if(I2c.available() == 0)
+	{
+		I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
+	}
+	return (char) I2c.receive();
 }
 
-String NMEAParser::readFromWire(int bytes) {
+String NMEAParser::readFromI2C(int bytes)
+{
 	String s = "";
-	Wire.requestFrom(_GNSS_ADDRESS, bytes);
-	while(Wire.available()) { 
-        byte b = Wire.read();
-        char c = (char) b;
-		s += c;
+	while(bytes > 0)
+	{
+		while(I2c.available()) { 
+			byte b = I2c.receive();
+			char c = (char) b;
+			s += c;
+			bytes--;
+		}
+		
+		if(I2c.available() == 0)
+		{
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
+		}		
 	}
 	return s;
 }
 
-String NMEAParser::readFromWirePretty(int bytes) {
+String NMEAParser::readFromI2CPretty(int bytes)
+{
+	
 	String s = "";
-	Wire.requestFrom(_GNSS_ADDRESS, bytes);
-	while(Wire.available()) { 
-        byte b = Wire.read();
-        if(b != 255) // Ensures that the 'no data available' byte (0xFF) is not written
-        {
-          char c = (char) b; 
-           s += c;
-        }
+	while(bytes > 0)
+	{
+		while(I2c.available()) {
+			byte b = I2c.receive();
+			if(b != 255) // Ensures that the 'no data available' byte (0xFF) is not written
+			{
+			  char c = (char) b; 
+			   s += c;
+			}
+			bytes--;
+		}
+		
+		if(I2c.available() == 0)
+		{
+			I2c.read(66, 0xFF, 16);  //TODO Fails here on balloonduino
+		}		
 	}
 	return s;
 }
@@ -175,23 +198,9 @@ String NMEAParser::readFromWirePretty(int bytes) {
 char NMEAParser::consumeBuffer() {
 	char c;
 	do {
-		c = readOneCharFromWire();
-	} while(c == _BUFFER_CHAR);
+		c = readOneCharFromI2C();
+	} while(c != _BUFFER_CHAR);
 	return c;
-}
-
-/* Calculates the Fletcher's Checksum of the given byte sequence and returns the result.
- *
- */
-byte NMEAParser::calcChecksum(byte* msg, int msgLength) {
-	byte sum = 0;
-	
-	for(int i = 0; i < msgLength; i++)
-	{
-		sum += msg[i];
-	}
-	
-	return sum;
 }
 
 void NMEAParser::appendChecksum(byte* msg, int msgLength)
@@ -212,12 +221,14 @@ void NMEAParser::appendChecksum(byte* msg, int msgLength)
 
 void NMEAParser::consumeCurrentLine()
 {
-	const int BUFFER_SIZE = 128;
-	int bytesRead = 0;
+	byte current = 0;
 	do {
-		byte buffer[BUFFER_SIZE];
-		bytesRead = Wire.readBytesUntil(_NEWLINE, buffer, BUFFER_SIZE);
-	} while(bytesRead == BUFFER_SIZE);
+		if(I2c.available() == 0)
+		{
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
+		}
+		current = I2c.receive();
+	} while(current != _BUFFER_CHAR );
 }
 
 String NMEAParser::getMessage(int timeout) {
@@ -226,28 +237,28 @@ String NMEAParser::getMessage(int timeout) {
 	byte b1 = 0;
 	byte b2 = 0;
 	while((millis() - startTime) < timeout) {
-		if(Wire.available() > 0) { // If bytes are available
+		if(I2c.available() > 0) { // If bytes are available
 			b1 = b2;
-			b2 = Wire.read();
+			b2 = I2c.receive();
 			if((b1 == _MU_LOWERCASE) && (b2 == _B_LOWERCASE)) { // Check if it is a proprietary UBX message (0xB5 0x62)
-				Serial3.println("case 1");
-				return readUBXMessageFromWire(timeout);
+				Serial.println("case 1");
+				return readUBXMessageFromI2C(timeout);
 			}
 			else if ((b1 == _DOLLAR_SIGN) && (b2 == _G_UPPERCASE)) { // Check if it is a GPS NMEA message ($G)
-				Serial3.println("case 2");
-				return readNMEAMessageFromWire(_G_UPPERCASE, timeout);
+				Serial.println("case 2");
+				return readNMEAMessageFromI2C(_G_UPPERCASE, timeout); 
 			}
 			else if((b1 == _DOLLAR_SIGN) && (b2 == _P_UPPERCASE)) { // Check if it is a properiatry U-blox NMEA message ($P)
-				Serial3.println("case 3");
-				return readNMEAMessageFromWire(_P_UPPERCASE, timeout);
+				Serial.println("case 3");
+				return readNMEAMessageFromI2C(_P_UPPERCASE, timeout);
 			}
 		}
 		else { // Wait for a byte to become available
 			delay(50);
-			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
 		}
 	}
-	return ""; // If the timeout is reached
+	return "No message."; // If the timeout is reached 
 }
 
 /*
@@ -255,7 +266,7 @@ String NMEAParser::getMessage(int timeout) {
  * Assumes the first two characters (0xB5 0x62) have already been consumed from the bus.
  * Timeout is in milliseconds.
  */
-String NMEAParser::readUBXMessageFromWire(int timeout) {
+String NMEAParser::readUBXMessageFromI2C(int timeout) {
 	String returnString = "";
 	long startTime = millis();
 	byte header[] = {0xB5, 0x62, 0x00, 0x00, 0x00, 0x00 }; // First two characters and four blank spaces for the rest of the header
@@ -265,19 +276,21 @@ String NMEAParser::readUBXMessageFromWire(int timeout) {
 	// Gets the header of the message
 	while(((millis() - startTime) < timeout) && (currentHeaderByteIndex < headerLength)) {
 
-		if(Wire.available() > 0) { // If bytes are available
-			header[currentHeaderByteIndex] = Wire.read(); // Writes one byte to the header
+		if(I2c.available() > 0) { // If bytes are available
+			header[currentHeaderByteIndex] = I2c.receive(); // Writes one byte to the header
 			currentHeaderByteIndex++;
 		}
 		else { // Wait for a byte to become available
 			delay(50);
-			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
 		}
 	}
 	
 	// Writes the header to the return string
 	for(int i = 0; i < headerLength; i++) {
-		returnString += header[i];
+		String s = String(header[i], HEX);
+		s.toUpperCase(); // Changes value stored in s
+		returnString += s;
 		returnString += ' ';
 	}
 	
@@ -285,14 +298,16 @@ String NMEAParser::readUBXMessageFromWire(int timeout) {
 	int currentPayloadIndex = 0; // Start at the beginning of the payload
 	
 	while(((millis() - startTime) < timeout) && (currentPayloadIndex < payloadLength)) {
-		if(Wire.available() > 0) { // If bytes are available
-			returnString += Wire.read();
+		if(I2c.available() > 0) { // If bytes are available
+			String s = String(I2c.receive(), HEX);
+			s.toUpperCase(); // Changes value stored in s
+			returnString += s;
 			returnString += ' ';
 			currentPayloadIndex++;			
 		}
 		else { // Wait for a byte to become available
 			delay(50);
-			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
 		}
 	}
 	return returnString; // In the event of a timeout
@@ -301,7 +316,7 @@ String NMEAParser::readUBXMessageFromWire(int timeout) {
 
 
 // Message type: G for gps, P for proprietary
-String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout) {
+String NMEAParser::readNMEAMessageFromI2C(byte messageTypeId, int timeout) {
 	String returnString = "";
 	long startTime = millis();
 	
@@ -325,20 +340,20 @@ String NMEAParser::readNMEAMessageFromWire(byte messageTypeId, int timeout) {
 			break;
 		}
 
-		if(Wire.available() > 0) { // If bytes are available
+		if(I2c.available() > 0) { // If bytes are available
 			b1 = b2;
 			if(b1 != CR) {
 				catChar = (char) b1;
 				returnString += catChar; // TODO verify logic
 			}
-			b2 = Wire.read(); // Writes one byte to the header			
+			b2 = I2c.receive(); // Writes one byte to the header			
 		}
 		else { // Wait for a byte to become available
 			delay(50);
-			Wire.requestFrom(_GNSS_ADDRESS, _DEFAULT_BYTES_TO_READ);
+			I2c.read(GNSS_ADDRESS, GNSS_REGISTER, DEFAULT_BYTES_TO_READ); 
 		}
 	}
-	Serial3.println(returnString);
+	//Serial3.println(returnString);
 	return returnString;
 }
 

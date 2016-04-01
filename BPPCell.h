@@ -27,7 +27,12 @@
 #define BPPCell_h
 
 #include <Arduino.h>
-#include <Wire.h>
+//#include <Wire.h>
+
+#define GNSS_ADDRESS 66
+#define GNSS_REGISTER 0xFF
+#define DEFAULT_BYTES_TO_READ 32 // The most allowed by the Ninjablox I2c library
+#define BUFFER_CHAR_VALUE 0xFF // The byte value of the buffer character; in this case, 0xFF, or ÿ
 
 struct DMSCoords {
 	int latDegs;
@@ -102,7 +107,6 @@ class NMEAParser {
 		int sendMessageToGNSS(byte address, byte* msg, int msgSize);
 		
 	//private:
-		int _GNSS_ADDRESS;
 		int _DEFAULT_BYTES_TO_READ;
 		char _BUFFER_CHAR;
 		char _NEWLINE;
@@ -111,18 +115,17 @@ class NMEAParser {
 		 byte _DOLLAR_SIGN;
 		 byte _G_UPPERCASE;
 		 byte _P_UPPERCASE;
-		char readOneCharFromWire();
-		String readFromWire(int bytes);
-		String readFromWirePretty(int bytes);
+		char readOneCharFromI2C();
+		String readFromI2C(int bytes);
+		String readFromI2CPretty(int bytes);
 		char consumeBuffer();
 		long parseLatFromGGA(String latString, bool isNorth);
 		long parseLonFromGGA(String lonString, bool isEast);
-		byte calcChecksum(byte* msg, int msgLength);
 		void appendChecksum(byte* msg, int msgLength);
 		void consumeCurrentLine();
 		String getMessage(int timeout);
-		String readUBXMessageFromWire(int timeout);
-		String readNMEAMessageFromWire(byte messageTypeId, int timeout);
+		String readUBXMessageFromI2C(int timeout);
+		String readNMEAMessageFromI2C(byte messageTypeId, int timeout);
 };
 
 class CellComm {

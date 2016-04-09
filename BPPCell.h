@@ -33,6 +33,10 @@
 #define GNSS_REGISTER 0xFF
 #define DEFAULT_BYTES_TO_READ 32 // The most allowed by the Ninjablox I2c library
 #define BUFFER_CHAR_VALUE 0xFF // The byte value of the buffer character; in this case, 0xFF, or ÿ
+#define FLIGHT_MODE 6 // The GNSS should be set to flight mode 6 (Aerospace, <1g). See uBlox documentation for UBX-CFG-NAV5 for further information.
+#define DEFAULT_FLIGHT_MODE 3 // The GNSS defaults to this flight mode on reset
+
+#define BYTE_OF_FLIGHT_MODE_IN_UBX_CFG_NAV5 8 // The index of the byte for flight mode within the CFG-NAV5 message, inlcuding headers. See Ublox GNSS documentation for details.
 
 struct DMSCoords {
 	int latDegs;
@@ -102,30 +106,45 @@ class NMEAParser {
 	public:
 		NMEAParser();
 		GPSCoords parseCoords(String GGAString);
-		String getGGAString();
-		String getNextLine();
-		int sendMessageToGNSS(byte address, byte* msg, int msgSize);
+
 		
-	//private:
+	private:
+
+		long parseLatFromGGA(String latString, bool isNorth);
+		long parseLonFromGGA(String lonString, bool isEast);
+};
+
+class GNSSComm {
+	public:
+	GNSSComm();
+	String getGGAString();
+	String getNextLine();
+	int sendMessageToGNSS(byte* msg, int msgSize);
+	bool configUbloxGNSSFlightMode(byte mode);
+	int getCurrentFlightMode();
+	void appendChecksum(byte* msg, int msgLength);
+	String getMessage(int timeout);
+	void getMessageBytesFromString(String, byte*, int, int);
+	
+	private:
 		int _DEFAULT_BYTES_TO_READ;
 		char _BUFFER_CHAR;
 		char _NEWLINE;
-		 byte _MU_LOWERCASE;
-		 byte _B_LOWERCASE;
-		 byte _DOLLAR_SIGN;
-		 byte _G_UPPERCASE;
-		 byte _P_UPPERCASE;
+		byte _MU_LOWERCASE;
+		byte _B_LOWERCASE;
+		byte _DOLLAR_SIGN;
+		byte _G_UPPERCASE;
+		byte _P_UPPERCASE;
 		char readOneCharFromI2C();
 		String readFromI2C(int bytes);
 		String readFromI2CPretty(int bytes);
 		char consumeBuffer();
-		long parseLatFromGGA(String latString, bool isNorth);
-		long parseLonFromGGA(String lonString, bool isEast);
-		void appendChecksum(byte* msg, int msgLength);
+		
 		void consumeCurrentLine();
-		String getMessage(int timeout);
+		
 		String readUBXMessageFromI2C(int timeout);
 		String readNMEAMessageFromI2C(byte messageTypeId, int timeout);
+	
 };
 
 class CellComm {

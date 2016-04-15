@@ -25,7 +25,7 @@ String GNSSComm::getGGAString() {
 	String returnString = "";
 	String readString = "";
 	Serial.println("cc");
-	//readString += consumeBuffer(); //Consumes the buffer and gets the first character
+	readString += consumeBuffer(); //Consumes the buffer and gets the first character
 	do {
 		readString += readFromI2C(128);
 	} while(readString.indexOf(_BUFFER_CHAR) == -1); //Ends loop when the next buffer is reached 

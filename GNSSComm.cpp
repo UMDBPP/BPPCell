@@ -15,6 +15,7 @@ GNSSComm::GNSSComm() {
 	 _P_UPPERCASE = 0x50;
 	_BUFFER_CHAR = char(BUFFER_CHAR_VALUE);
 	_NEWLINE = '\n';
+	I2c.begin();
 }
 
 /* Gets the $GPGGA message from the GPS module
@@ -23,7 +24,8 @@ GNSSComm::GNSSComm() {
 String GNSSComm::getGGAString() {
 	String returnString = "";
 	String readString = "";
-	readString += consumeBuffer(); //Consumes the buffer and gets the first character
+	Serial.println("cc");
+	//readString += consumeBuffer(); //Consumes the buffer and gets the first character
 	do {
 		readString += readFromI2C(128);
 	} while(readString.indexOf(_BUFFER_CHAR) == -1); //Ends loop when the next buffer is reached 

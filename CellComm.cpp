@@ -32,8 +32,8 @@ CellComm::CellComm() {}
 
 // Call this method after
 void CellComm::setup() {
-	Serial2.begin(9600);
-	Serial2.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
+	Serial.begin(115200);
+	Serial.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
 	readSerial();
 }
 
@@ -45,11 +45,11 @@ void CellComm::sendMessage(String number, String message) {
 	String commandString = "AT+CMGS=\"";
 	commandString += number;
 	commandString +="\"";
-	Serial2.println(commandString);
+	Serial.println(commandString);
 	delay(20);
 	readSerial();
-	Serial2.print(message);
-	Serial2.println(char(0x1A));
+	Serial.print(message);
+	Serial.println(char(0x1A));
 	delay(1000);
 	readSerial();
 }
@@ -58,9 +58,9 @@ void CellComm::sendMessage(String number, String message) {
  */
 int CellComm::getNumMessages() {
 	String keyString = "+CMGL";
-	Serial2.println("AT+CMGL");
+	Serial.println("AT+CMGL");
 	//delay(20);
-	//Serial2.println(char(0x1A));
+	//Serial.println(char(0x1A));
 	delay(1000);
 	String prevString = "";
 	String currentString = "";
@@ -70,18 +70,17 @@ int CellComm::getNumMessages() {
 	/**************/
 	long startTime = millis();
 	while((millis() - startTime) <= 15000) {
-		int b = Serial2.read();
+		int b = Serial.read();
 		char c = (char) b;
 		if (b != -1)
 			Serial.print(c);
 		
 	}
-	Serial.println("==============");
 	/************/
-	while(Serial2.available() > 0) {
+	while(Serial.available() > 0) {
 		char buffer[64];
-		int available = Serial2.available();
-		Serial2.readBytes(buffer, available);
+		int available = Serial.available();
+		Serial.readBytes(buffer, available);
 		prevString = currentString;
 		currentString = "";
 		currentString += buffer;
@@ -89,7 +88,6 @@ int CellComm::getNumMessages() {
 		String searchString = prevString + currentString;
 		numMessages += countOccurences(searchString, keyString, 0);
 		delay(20);
-		Serial.println("here"); // TODO remove
 	}
 	return numMessages;
 }
@@ -101,13 +99,13 @@ int CellComm::getNumMessages() {
 String CellComm::getMessage(int index) {
 	String command = "AT+CMGR=";
 	command += index;
-	Serial2.println(command);
+	Serial.println(command);
 	delay(100);
 	String s = "";
-	while(Serial2.available() > 0) {
+	while(Serial.available() > 0) {
 		char buffer[64];
-		int available = Serial2.available();
-		Serial2.readBytes(buffer, available);
+		int available = Serial.available();
+		Serial.readBytes(buffer, available);
 		s += buffer;
 		delay(50);
 	}
@@ -125,11 +123,11 @@ String CellComm::getMessage(int index) {
  * deleted, merely that the cell module processed the command.
  */
 bool CellComm::deleteAllMessages() {
-	Serial2.println("AT+CMGD=1,4");
+	Serial.println("AT+CMGD=1,4");
 	delay(5);
-	int available = Serial2.available();	
+	int available = Serial.available();	
 	char* buffer = new char[available];
-	Serial2.readBytes(buffer, available);
+	Serial.readBytes(buffer, available);
 	String s = "";
 	s += buffer;
 	delete[] buffer;
@@ -141,8 +139,8 @@ bool CellComm::deleteAllMessages() {
 // Consumes the output from the cell module on the Serial interface.
 void CellComm::readSerial() { 
     String n = "";
-    while(Serial2.available() > 0) {
-      char c = Serial2.read();
+    while(Serial.available() > 0) {
+      char c = Serial.read();
       n+=c;
       delay(10);
     }
@@ -158,10 +156,10 @@ void CellComm::readSerial() {
  * See Ublox documentation on 'AT+CSQ' for more details
  */
 int CellComm::getCSQ() {
-	Serial2.println("AT+CSQ");
-	int CSQ = Serial2.parseInt();
-	while(Serial2.available() > 0) {
-		Serial2.read();
+	Serial.println("AT+CSQ");
+	int CSQ = Serial.parseInt();
+	while(Serial.available() > 0) {
+		Serial.read();
 		delay(5);
 	}
 	return CSQ;

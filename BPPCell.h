@@ -31,6 +31,8 @@
 
 #define GNSS_ADDRESS 66
 #define GNSS_REGISTER 0xFF
+#define CELL_SERIAL Serial // The serial interface to use to communicate with the cell modem
+#define CELL_SERIAL_BAUD 115200
 #define DEFAULT_BYTES_TO_READ 32 // The most allowed by the Ninjablox I2c library
 #define BUFFER_CHAR_VALUE 0xFF // The byte value of the buffer character; in this case, 0xFF, or ÿ
 #define FLIGHT_MODE 6 // The GNSS should be set to flight mode 6 (Aerospace, <1g). See uBlox documentation for UBX-CFG-NAV5 for further information.

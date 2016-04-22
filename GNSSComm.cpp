@@ -273,13 +273,13 @@ String GNSSComm::readNMEAMessageFromI2C(byte messageTypeId, int timeout) {
 }
 
 /* Configures the flight mode of the uBlox GNSS
- * Returns true for successful completion, false for unsuccessful completion; times out after 1 second.
+ * Returns 0 for successful completion, 1 for unsuccessful completion; times out after 1 second.
  * Flight mode parameter: 3 for standard, 6 for high-altitude. Refer to uBlox documentation (UBX-CFG-NAV5) for further information.
  */
 bool GNSSComm::configUbloxGNSSFlightMode(byte mode) {
 	int maxValidMode = 8; // Valid modes are 0-8
 	if(mode > maxValidMode) { // Mode is invalid
-		return false;
+		return 1;
 	}
 	byte msg[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, // Message header - NAV5
 				0xFF, 0xFF, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, // Mask, dynamic platform mode (controlled by mode parameter), auto 2D-3D
@@ -303,10 +303,10 @@ bool GNSSComm::configUbloxGNSSFlightMode(byte mode) {
 	while((millis() - startTime) <= timeout) {
 		String response = getMessage(timeout/4); // Gets a message. Providing a smaller timeout allows for the possibility that the GNSS might transmit something between receiving the command and sending the ACK
 		if(response.indexOf(expectedResponse) > -1) { // ACK received; mesage was sent and received
-			return true;
+			return 0;
 		}
 	}
-	return false; // No ACK was received
+	return 1; // No ACK was received
 }
 
 /**

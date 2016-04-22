@@ -81,9 +81,9 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += coords.latSecs;
 			returnString += "\" ";
 			if(coords.isNorth) 
-				returnString += "N";
+				returnString += "N ";
 			else
-				returnString += "S";
+				returnString += "S ";
 			returnString += "\n";
 			returnString += "Lon: ";
 			returnString += coords.lonDegs;
@@ -94,16 +94,16 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += coords.lonSecs;
 			returnString += "\" ";
 			if(coords.isEast) 
-				returnString += "E";
+				returnString += "E ";
 			else
-				returnString += "W";
+				returnString += "W ";
 			returnString += "\n";
 			returnString += (String("Alt: ") + getAlt() + "m MSL\n");
 			break;
 		}
 		case FORMAT_DMS_ONELINE: {
 			DMSCoords coords = getLatLonInDMS();
-			returnString += ("Time: " + getFormattedTimeString() + " UTC");
+			returnString += ("Time: " + getFormattedTimeString() + " UTC ");
 			returnString += "Lat: ";
 			returnString += coords.latDegs;
 			returnString += char(0xB0);
@@ -113,9 +113,9 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += coords.latSecs;
 			returnString += "\" ";
 			if(coords.isNorth) 
-				returnString += "N";
+				returnString += "N ";
 			else
-				returnString += "S";
+				returnString += "S ";
 			returnString += "Lon: ";
 			returnString += coords.lonDegs;
 			returnString += char(0xB0);
@@ -125,9 +125,9 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += coords.lonSecs;
 			returnString += "\" ";
 			if(coords.isEast) 
-				returnString += "E";
+				returnString += "E ";
 			else
-				returnString += "W";
+				returnString += "W ";
 			returnString += (String("Alt: ") + getAlt() + "m MSL");
 			break;
 		}
@@ -155,6 +155,7 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += "Alt: ";
 			returnString += getAlt();
 			returnString += "m MSL\n";
+			DEBUG_SERIAL.println(returnString);
 			break;
 		}
 		

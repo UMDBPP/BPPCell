@@ -32,8 +32,10 @@ CellComm::CellComm() {}
 
 // Call this method after
 void CellComm::setup() {
-	CELL_SERIAL.begin(115200);
+	CELL_SERIAL.begin(CELL_SERIAL_BAUD);
 	CELL_SERIAL.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
+	CELL_SERIAL.println("Go Terps");
+	delay(50);
 	readSerial();
 }
 
@@ -136,14 +138,15 @@ bool CellComm::deleteAllMessages() {
 	return false;
 }
 
-// Consumes the output from the cell module on the Serial interface.
-void CellComm::readSerial() { 
+// Consumes the output from the cell module on the Serial interface and returns the output.
+String CellComm::readSerial() { 
     String n = "";
     while(CELL_SERIAL.available() > 0) {
       char c = CELL_SERIAL.read();
       n+=c;
       delay(10);
     }
+	return n;
 }
 
 /* Gets the cell signal quality from the cell module
@@ -158,10 +161,6 @@ void CellComm::readSerial() {
 int CellComm::getCSQ() {
 	CELL_SERIAL.println("AT+CSQ");
 	int CSQ = CELL_SERIAL.parseInt();
-	while(CELL_SERIAL.available() > 0) {
-		CELL_SERIAL.read();
-		delay(5);
-	}
 	return CSQ;
 }
 

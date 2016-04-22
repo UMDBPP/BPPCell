@@ -14,6 +14,7 @@ GNSSComm::GNSSComm() {
 	 _G_UPPERCASE = 0x47;
 	 _P_UPPERCASE = 0x50;
 	_BUFFER_CHAR = char(BUFFER_CHAR_VALUE);
+	_NULL_CHAR = char(NULL_CHAR_VALUE);
 	_NEWLINE = '\n';
 	I2c.begin();
 }
@@ -24,7 +25,6 @@ GNSSComm::GNSSComm() {
 String GNSSComm::getGGAString() {
 	String returnString = "";
 	String readString = "";
-	Serial.println("cc");
 	readString += consumeBuffer(); //Consumes the buffer and gets the first character
 	do {
 		readString += readFromI2C(128);
@@ -68,9 +68,12 @@ String GNSSComm::readFromI2C(int bytes)
 	{
 		while(I2c.available()) { 
 			byte b = I2c.receive();
-			char c = (char) b;
-			s += c;
-			bytes--;
+			if(b != NULL_CHAR_VALUE) // TODO figure out why nulls are an issue
+			{	char c = (char) b;
+				s += c;
+				bytes--;
+				//DEBUG_SERIAL.print(c);
+			}
 		}
 		
 		if(I2c.available() == 0)
@@ -89,7 +92,7 @@ String GNSSComm::readFromI2CPretty(int bytes)
 	{
 		while(I2c.available()) {
 			byte b = I2c.receive();
-			if(b != 255) // Ensures that the 'no data available' byte (0xFF) is not written
+			if(b != BUFFER_CHAR_VALUE) // Ensures that the 'no data available' byte (0xFF) is not written
 			{
 			  char c = (char) b; 
 			   s += c;
@@ -107,10 +110,10 @@ String GNSSComm::readFromI2CPretty(int bytes)
 	
 /* Consumes the buffer and returns the first non-buffer character */
 char GNSSComm::consumeBuffer() {
-	char c;
+	char c = char(0x00);
 	do {
 		c = readOneCharFromI2C();
-	} while(c != _BUFFER_CHAR);
+	} while((c == _BUFFER_CHAR) || (c == _NULL_CHAR)); // TODO nulls
 	return c;
 }
 

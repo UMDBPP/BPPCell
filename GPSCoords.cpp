@@ -29,23 +29,26 @@
 
 GPSCoords::GPSCoords(String time, long lat, long lon, float alt) {
 	_time = time;
-	_lat = lat;
-	_lon = lon;
-	_alt = alt;
+	_lat = lat; //Stored in ten-thousandths of a minute (minute * 10^-4)
+	_lon = lon; //Stored in ten-thousandths of a minute (minute * 10^-4)
+	_alt = alt; // Stored in meters above mean sea level
 }
 
 void GPSCoords::setTime(String time) {
 	_time = time;
 }
 
+// Sets the latitude; unit is ten-thousandths of a minute (minute * 10^-4)
 void GPSCoords::setLat(long lat) {
 	_lat = lat;
 }
 
+// Sets the longitude; unit is ten-thousandths of a minute (minute * 10^-4)
 void GPSCoords::setLon(long lon) {
 	_lon = lon;
 }
 
+// Sets the altitude; unit is meters
 void GPSCoords::setAlt(float alt) {
 	_alt = alt;
 }
@@ -54,22 +57,26 @@ String GPSCoords::getTime() {
 	return _time;
 }
 
+// Gets the latitude; unit is ten-thousandths of a minute (minute * 10^-4)
 long GPSCoords::getLat() {
 	return _lat;
 }
 
+// Gets the longitude; unit is ten-thousandths of a minute (minute * 10^-4)
 long GPSCoords::getLon() {
 	return _lon;
 }
 
+// Gets the altitude; unit is meters
 float GPSCoords::getAlt() {
 	return _alt;
 }
 
+// Formats the coordinates for text according to one of the FORMAT constants
 String GPSCoords::formatCoordsForText(int format) {
 	String returnString = "";
 	switch (format) {
-		case FORMAT_DMS: {
+		case FORMAT_DMS: { // Degrees, minutes, and seconds; multiple lines
 			DMSCoords coords = getLatLonInDMS();
 			returnString += ("Time: " + getFormattedTimeString() + " UTC\n");
 			returnString += "Lat: ";
@@ -98,7 +105,7 @@ String GPSCoords::formatCoordsForText(int format) {
 			else
 				returnString += "W ";
 			returnString += "\n";
-			returnString += (String("Alt: ") + getAlt() + "m MSL\n");
+			returnString += (String("Alt: ") + getAlt() + "m MSL");
 			break;
 		}
 		case FORMAT_DMS_ONELINE: {
@@ -131,61 +138,12 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += (String("Alt: ") + getAlt() + "m MSL");
 			break;
 		}
-		case FORMAT_DEC_DEGS: {
-			DecDegsCoords coords = getLatLonInDecDegs();
-			String decLatString = "";
-			String decLonString = "";
-			const int lengthOfDecLatString = 9;
-			const int lengthOfDecLonString = 10;
-			char decLatStrArray[lengthOfDecLatString];
-			char decLonStrArray[lengthOfDecLonString];
-			dtostrf(coords.lat,lengthOfDecLatString,6, decLatStrArray);
-			dtostrf(coords.lon,lengthOfDecLonString,6, decLonStrArray);
-			decLatString += decLatStrArray;
-			decLonString += decLonStrArray;
-			returnString += ("Time: " + getFormattedTimeString() + " UTC \n");
-			returnString += "Lat: ";
-			returnString += decLatString;
-			returnString += char(0xB0);
-			returnString += "\n";
-			returnString += "Lon: ";
-			returnString += decLonString;
-			returnString += char(0xB0);
-			returnString += "\n";
-			returnString += "Alt: ";
-			returnString += getAlt();
-			returnString += "m MSL\n";
-			DEBUG_SERIAL.println(returnString);
-			break;
-		}
-		
-		case FORMAT_DEC_DEGS_CSV: {
-			DecDegsCoords coords = getLatLonInDecDegs();
-			String decLatString = "";
-			String decLonString = "";
-			const int lengthOfDecLatString = 9;
-			const int lengthOfDecLonString = 10;
-			char decLatStrArray[lengthOfDecLatString];
-			char decLonStrArray[lengthOfDecLonString];
-			dtostrf(coords.lat,lengthOfDecLatString,6, decLatStrArray);
-			dtostrf(coords.lon,lengthOfDecLonString,6, decLonStrArray);
-			decLatString += decLatStrArray;
-			decLonString += decLonStrArray;
-			returnString += (getFormattedTimeString() + ",");
-			returnString += decLatString;
-			returnString += ",";
-			returnString += decLonString;
-			returnString += ",";
-			returnString += getAlt();
-			break;
-		}
-		
 		case FORMAT_DMS_CSV: {
 			DMSCoords coords = getLatLonInDMS();
-			if(!coords.isNorth) 
-				returnString += "-";
 			returnString += getFormattedTimeString();
 			returnString += ",";
+			if(!coords.isNorth) 
+				returnString += "-";
 			returnString += coords.latDegs;
 			returnString += ",";
 			returnString += coords.latMins;
@@ -202,19 +160,41 @@ String GPSCoords::formatCoordsForText(int format) {
 			returnString += coords.lonSecs;
 			returnString += ",";
 
-			returnString += (getAlt());
+			returnString += getAlt();
+			break;
+		}
+		case FORMAT_DEC_DEGS: {
+			DecDegsCoords coords = getLatLonInDecDegs();
+			returnString += ("Time: " + getFormattedTimeString() + " UTC \n");
+			returnString += "Lat: ";
+			returnString += getDecDegsLatString(coords);
+			returnString += char(0xB0);
+			returnString += "\n";
+			returnString += "Lon: ";
+			returnString += getDecDegsLonString(coords);
+			returnString += char(0xB0);
+			returnString += "\n";
+			returnString += "Alt: ";
+			returnString += getAlt();
+			returnString += "m MSL";
+			break;
+		}
+		case FORMAT_DEC_DEGS_CSV: {
+			DecDegsCoords coords = getLatLonInDecDegs();
+			returnString += (getFormattedTimeString() + ",");
+			returnString += getDecDegsLatString(coords);
+			returnString += ",";
+			returnString += getDecDegsLonString(coords);
+			returnString += ",";
+			returnString += getAlt();
 			break;
 		}
 	}
-	// Uncomment the line below to enable debug output
-	//Serial3.println(returnString);
 	return returnString;
 }
 
 
-/* Updates the DMSArray to the current coordinate values in degrees, minutes, and seconds
- * DMSArray has six fields. In order: lat degs, lat mins, lat secs, lon degs, lon mins, lon secs
- */
+// Gets the coordinates stored by this GPSCoords object in a DMSCoords struct, which gives degree-minute-second formatting
 DMSCoords GPSCoords::getLatLonInDMS(void) {
 	DMSCoords coords;
 	long localLat = abs(_lat);
@@ -248,27 +228,76 @@ DMSCoords GPSCoords::getLatLonInDMS(void) {
 	else
 		coords.isEast = false;
 	
-	
-	
 	return coords;
 }
 
-/* Gets the latitude and longitude in decimal degrees.
- * WARNING: The Arduino is limited to 8-bit precision when working with floating point numbers. This may result in a loss of precision in the coordinates.
- * Input is an array of floating point numbers containing at least two elements. The method will not function properly if the input array does not have at least two elements.
- * Method populates the first and second elements of the input array with the latitude and longitude, respectively, of the coordinates.
+/* Gets the latitude and longitude of this GPSCoords object a DecDegsCoords struct, which gives decimal degree formatting
+ * North latitude and east longitude are positive.
  */
 DecDegsCoords GPSCoords::getLatLonInDecDegs(void) {
-	DecDegsCoords coords;
-	float decLat = _lat/((float) MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
-	float decLon = _lon/((float) MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE);
-	coords.lat = decLat;
-	coords.lon = decLon;
+	DecDegsCoords coords; 
+	coords.latChar = _lat / (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE); // Characteristic is whole number of degrees
+
+	coords.latMant = (abs(_lat) % (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE))
+		/ ((float) (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE)); // Mantissa is remainder
+	coords.lonChar = _lon / (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE); // Characteristic is whole number of degrees
+	coords.lonMant = (abs(_lon) % (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE))
+		/ ((float) (MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE)); // Mantissa is remainder
 	return coords;
 }
 
+// Gets a time string with punctuation based on this GPSCoords object's time
+// Assumes this GPSCoords object's time is in the format of a $GPGGA string (see UBlox documentation for futher details)
 String GPSCoords::getFormattedTimeString() {
 	String returnString = "";
 	returnString += (_time.substring(0, 2) + ":" + _time.substring(2,4) + ":" + _time.substring(4));
 	return returnString;	
+}
+
+// Gets the string representation of the latitude in decimal degrees
+String GPSCoords::getDecDegsLatString() {
+	DecDegsCoords coords = getLatLonInDecDegs();
+	return getDecDegsLatString(coords);
+}
+
+// Gets the string representation of the longitude in decimal degrees
+String GPSCoords::getDecDegsLonString() {
+	DecDegsCoords coords = getLatLonInDecDegs();
+	return getDecDegsLonString(coords);
+}
+
+// Gets the string representation of the latitude in decimal degrees
+// Input is the DecDegs struct representing the coordinates to convert
+String GPSCoords::getDecDegsLatString(DecDegsCoords coords) {
+	String decLatString = "";
+	decLatString += coords.latChar; // Append the characteristic
+	
+	const int mantissaDisplayLength = 7; // Number of digits of the mantissa to display
+	const int mantissaStrArrLength = 9; // Must have a place for the leading zero and decimal point
+	char latMantStrArray[mantissaStrArrLength];
+	dtostrf(coords.latMant, mantissaStrArrLength, mantissaDisplayLength, latMantStrArray); // Convert mantissa to a char array
+	
+	String latMantString = "";
+	latMantString += latMantStrArray; // Convert the char array to a string
+	
+	decLatString += latMantString.substring(1); // Drop the leading zero of the mantissa and append it to the string
+	return decLatString;
+}
+
+// Gets the string representation of the longitude in decimal degrees
+// Input is the DecDegs struct representing the coordinates to convert
+String GPSCoords::getDecDegsLonString(DecDegsCoords coords) {
+	String decLonString = "";
+	decLonString += coords.lonChar; // Append the characteristic
+	
+	const int mantissaDisplayLength = 7; // Number of digits of the mantissa to display
+	const int mantissaStrArrLength = 9; // Must have a place for the leading zero and decimal point
+	char lonMantStrArray[mantissaStrArrLength];
+	dtostrf(coords.lonMant, mantissaStrArrLength, mantissaDisplayLength, lonMantStrArray); // Convert mantissa to a char array
+	
+	String lonMantString = "";
+	lonMantString += lonMantStrArray; // Convert the char array to a string
+	
+	decLonString += lonMantString.substring(1); // Drop the leading zero of the mantissa and append it to the string
+	return decLonString;
 }

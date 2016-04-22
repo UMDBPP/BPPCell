@@ -54,9 +54,12 @@ struct DMSCoords {
 	bool isEast;
 };
 
+// GPS Coordinates structure in decimal degrees format
 struct DecDegsCoords {
-	float lat;
-	float lon;
+	int latChar; // Characteristic (integer part) of the latitude
+	float latMant; // Mantissa (decimal part) of the latitude
+	int lonChar; // Characteristic (integer part) of the longitude
+	float lonMant; // Mantissa (decimal part) of the longitude
 };
 
 class GPSCoords {
@@ -73,38 +76,28 @@ class GPSCoords {
 		const int MINUTES_PER_DEGREE = 60;
 		const long TEN_THOUSANDTHS_PER_MINUTE = 10000;
 		const int SECONDS_PER_MINUTE = 60;
+		const long TEN_THOUSANDTHS_PER_DEGREE = TEN_THOUSANDTHS_PER_MINUTE * MINUTES_PER_DEGREE;
 		String formatCoordsForText(int format);
 		String getFormattedTimeString();
 		DMSCoords getLatLonInDMS();
 		DecDegsCoords getLatLonInDecDegs();
-		/*
-		// Describe the structure for degree-minute-second format
-		const int DMS_LAT_DEG_INDEX = 0;
-		const int DMS_LAT_MIN_INDEX = 1;
-		const int DMS_LAT_SEC_INDEX = 2;
-		const int DMS_LON_DEG_INDEX = 3;
-		const int DMS_LON_MIN_INDEX = 4;
-		const int DMS_LON_SEC_INDEX = 5;
-		const int LENGTH_OF_DMS_ARRAY = 6;
-		
-		// Describe the structure of decimal degree format
-		const int DEC_DEGS_LAT_INDEX = 0;
-		const int DEC_DEGS_LON_INDEX = 1;
-		*/
+		String getDecDegsLatString(void);
+		String getDecDegsLonString(void);
+		String getDecDegsLatString(DecDegsCoords);
+		String getDecDegsLonString(DecDegsCoords);
 		
 		// Specify the various formats
-		const static int FORMAT_DMS = 1;
-		const static int FORMAT_DMS_ONELINE = 2;
-		const static int FORMAT_DMS_CSV = 3;
-		// NOTE: Decimal degree format is NOT SUPPORTED as of this version (1.0/May 2015)
-		const static int FORMAT_DEC_DEGS = 4;
-		const static int FORMAT_DEC_DEGS_CSV = 5;
+		const static int FORMAT_DMS = 1; // Degrees, minutes, and seconds; multiple lines
+		const static int FORMAT_DMS_ONELINE = 2; // Degrees, minutes, and seconds; one line
+		const static int FORMAT_DMS_CSV = 3; // Degrees, minutes, and seconds; comma-separated on one line
+		const static int FORMAT_DEC_DEGS = 4; // Decimal degrees; multiple lines
+		const static int FORMAT_DEC_DEGS_CSV = 5; // Decimal degrees; comma-separated on one line
 	
 	private:
 		String _time;
 		long _lat; //Stored in ten-thousandths of a minute (minute * 10^-4)
 		long _lon; //Stored in ten-thousandths of a minute (minute * 10^-4)
-		float _alt;
+		float _alt; // Stored in meters above mean sea level
 };
 
 class NMEAParser {

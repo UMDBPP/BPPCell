@@ -31,9 +31,9 @@
 
 #define GNSS_ADDRESS 66
 #define GNSS_REGISTER 0xFE
-#define DEBUG_SERIAL Serial // The serial interface used for debugging
+#define DEBUG_SERIAL Serial3 // The serial interface used for debugging
 #define DEBUG_SERIAL_BAUD 9600
-#define CELL_SERIAL Serial2 // The serial interface to use to communicate with the cell modem
+#define CELL_SERIAL Serial // The serial interface to use to communicate with the cell modem
 #define CELL_SERIAL_BAUD 115200
 #define DEFAULT_BYTES_TO_READ 32 // The most allowed by the Ninjablox I2c library
 #define BUFFER_CHAR_VALUE 0xFF // The byte value of the buffer character; in this case, 0xFF, or ÿ

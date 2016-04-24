@@ -34,7 +34,6 @@ CellComm::CellComm() {}
 void CellComm::setup() {
 	CELL_SERIAL.begin(CELL_SERIAL_BAUD);
 	CELL_SERIAL.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
-	CELL_SERIAL.println("Go Terps");
 	delay(50);
 	readSerial();
 }
@@ -44,6 +43,7 @@ void CellComm::setup() {
  * Input message is the message to be sent
  */
 void CellComm::sendMessage(String number, String message) {
+	readSerial();
 	String commandString = "AT+CMGS=\"";
 	commandString += number;
 	commandString +="\"";
@@ -52,7 +52,7 @@ void CellComm::sendMessage(String number, String message) {
 	readSerial();
 	CELL_SERIAL.print(message);
 	CELL_SERIAL.println(char(0x1A));
-	delay(1000);
+	delay(3000);
 	readSerial();
 }
 
@@ -159,8 +159,10 @@ String CellComm::readSerial() {
  * See Ublox documentation on 'AT+CSQ' for more details
  */
 int CellComm::getCSQ() {
+	readSerial(); // Flushes the serial line
 	CELL_SERIAL.println("AT+CSQ");
 	int CSQ = CELL_SERIAL.parseInt();
+	readSerial();
 	return CSQ;
 }
 

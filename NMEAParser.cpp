@@ -25,14 +25,11 @@
  */
 
 #include <Arduino.h>
-#include <Wire.h>
+//#include <Wire.h>
 #include <BPPCell.h>
+#include <I2C.h>
 
-NMEAParser::NMEAParser() {
-	Wire.begin();
-	_GNSS_ADDRESS = 66;
-	_BUFFER_CHAR = char(0xFF);
-}
+NMEAParser::NMEAParser() { }
 
 GPSCoords NMEAParser::parseCoords(String GGAString) {
 	//Start indices are the first characters indices of the given field
@@ -67,25 +64,12 @@ GPSCoords NMEAParser::parseCoords(String GGAString) {
 	return GPSCoords(time, lat, lon, alt);
 }
 
-/* Gets the $GPGGA message from the GPS module
- * Note: this can be a time-intensive (>1 sec) function, as it requires the GPS module to cycle through an entire message
- */
-String NMEAParser::getGGAString() {
-	String returnString = "";
-	String readString = "";
-	readString += consumeBuffer(); //Consumes the buffer and gets the first character
-	do {
-		readString += readFromWire(128);
-	} while(readString.indexOf(_BUFFER_CHAR) == -1); //Ends loop when the next buffer is reached 
-	int GGAIndex = readString.indexOf("$GPGGA");
-	int endOfGGAIndex = readString.indexOf("$", GGAIndex + 1);
-	return readString.substring(GGAIndex, endOfGGAIndex);	
-}
 /* Parses the latitude from an NMEA GGA string
  *
  *
  */
-long NMEAParser::parseLatFromGGA(String latString, bool isNorth) {
+long NMEAParser::parseLatFromGGA(String latString, bool isNorth)
+{
 	int degrees = latString.substring(0, 2).toInt(); //Gets the degree component of the latitude
 	int minutes = latString.substring(2, 4).toInt(); //Gets the integral minutes component of the latitude
 	float decMinutes = latString.substring(4).toFloat(); //Gets the decimal minutes component of the latitude
@@ -99,7 +83,8 @@ long NMEAParser::parseLatFromGGA(String latString, bool isNorth) {
 	return NSMultiplier*(degrees*MINUTES_PER_DEGREE*TEN_THOUSANDTHS_PER_MINUTE + minutes*TEN_THOUSANDTHS_PER_MINUTE + ((long) (decMinutes*(TEN_THOUSANDTHS_PER_MINUTE))));
 }
 
-long NMEAParser::parseLonFromGGA(String lonString, bool isEast) {
+long NMEAParser::parseLonFromGGA(String lonString, bool isEast)
+{
 	int degrees = lonString.substring(0, 3).toInt(); //Gets the degree component of the longitude
 	int minutes = lonString.substring(3, 5).toInt(); //Gets the integral minutes component of the longitude
 	float decMinutes = lonString.substring(5).toFloat(); //Gets the decimal minutes component of the longitude
@@ -114,26 +99,3 @@ long NMEAParser::parseLonFromGGA(String lonString, bool isEast) {
 }
 
 
-char NMEAParser::readOneCharFromWire() {
-	Wire.requestFrom(_GNSS_ADDRESS, 1);
-	return Wire.read();	
-}
-
-String NMEAParser::readFromWire(int bytes) {
-	String s = "";
-	Wire.requestFrom(_GNSS_ADDRESS, bytes);
-	while(Wire.available()) { 
-		char c = Wire.read();
-		s += c;
-	}
-	return s;
-}
-
-/* Consumes the buffer and returns the first non-buffer character */
-char NMEAParser::consumeBuffer() {
-	char c;
-	do {
-		c = readOneCharFromWire();
-	} while(c == _BUFFER_CHAR);
-	return c;
-}

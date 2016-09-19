@@ -32,8 +32,9 @@ CellComm::CellComm() {}
 
 // Call this method after
 void CellComm::setup() {
-	Serial.begin(115200);
-	Serial.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
+	CELL_SERIAL.begin(CELL_SERIAL_BAUD);
+	CELL_SERIAL.println("AT+CMGF=1"); // Changes io mode to text (cf. hex)
+	delay(50);
 	readSerial();
 }
 
@@ -42,34 +43,78 @@ void CellComm::setup() {
  * Input message is the message to be sent
  */
 void CellComm::sendMessage(String number, String message) {
+	readSerial();
 	String commandString = "AT+CMGS=\"";
 	commandString += number;
 	commandString +="\"";
-	Serial.println(commandString);
+	CELL_SERIAL.println(commandString);
 	delay(20);
 	readSerial();
-	Serial.print(message);
-	Serial.println(char(0x1A));
-	delay(1000);
+	CELL_SERIAL.print(message);
+	CELL_SERIAL.println(char(0x1A));
+	delay(3000);
 	readSerial();
 }
 
-/* Gets the messages waiting on the cell module.
- * This method may contain bugs. Use caution.
+/* Gets the number of messages waiting on the cell module.
  */
-String CellComm::getMessages() {
-	Serial.println("AT+CMGL");
+int CellComm::getNumMessages() {
+	String keyString = "+CMGL";
+	CELL_SERIAL.println("AT+CMGL");
+	//delay(20);
+	//CELL_SERIAL.println(char(0x1A));
+	delay(1000);
+	String prevString = "";
+	String currentString = "";
+	
+	int numMessages = -1; // TODO
+	
+	/**************/
+	long startTime = millis();
+	while((millis() - startTime) <= 15000) {
+		int b = CELL_SERIAL.read();
+		char c = (char) b;
+		if (b != -1)
+			CELL_SERIAL.print(c);
+		
+	}
+	/************/
+	while(CELL_SERIAL.available() > 0) {
+		char buffer[64];
+		int available = CELL_SERIAL.available();
+		CELL_SERIAL.readBytes(buffer, available);
+		prevString = currentString;
+		currentString = "";
+		currentString += buffer;
+		
+		String searchString = prevString + currentString;
+		numMessages += countOccurences(searchString, keyString, 0);
+		delay(20);
+	}
+	return numMessages;
+}
+
+/* Gets the message at the given index, if one exists. 
+ * Index must be strictly greater than 0 and less than or equal to the number of messages.
+ * If the index is invalid, returns the empty string.
+ */
+String CellComm::getMessage(int index) {
+	String command = "AT+CMGR=";
+	command += index;
+	CELL_SERIAL.println(command);
 	delay(100);
 	String s = "";
-	char buffer[64];
-	while(Serial.available() > 0) {
-		int available = Serial.available();
-		Serial.readBytes(buffer, available);
+	while(CELL_SERIAL.available() > 0) {
+		char buffer[64];
+		int available = CELL_SERIAL.available();
+		CELL_SERIAL.readBytes(buffer, available);
 		s += buffer;
-		delay(100);
+		delay(50);
 	}
-	//Serial3.println("Messages are: ");
-	//Serial3.println(s);
+	
+	String errorString = "+CMS ERROR: invalid memory index";
+	if(s.indexOf(errorString) < 0)
+		return "";
 	return s;
 }
 
@@ -80,26 +125,28 @@ String CellComm::getMessages() {
  * deleted, merely that the cell module processed the command.
  */
 bool CellComm::deleteAllMessages() {
-	Serial.println("AT+CMGD=1,4");
+	CELL_SERIAL.println("AT+CMGD=1,4");
 	delay(5);
-	int available = Serial.available();	
+	int available = CELL_SERIAL.available();	
 	char* buffer = new char[available];
-	Serial.readBytes(buffer, available);
+	CELL_SERIAL.readBytes(buffer, available);
 	String s = "";
 	s += buffer;
+	delete[] buffer;
 	if(s.indexOf("OK") > -1)
 		return true;
 	return false;
 }
 
-// Consumes the output from the cell module on the Serial interface.
-void CellComm::readSerial() { 
+// Consumes the output from the cell module on the Serial interface and returns the output.
+String CellComm::readSerial() { 
     String n = "";
-    while(Serial.available() > 0) {
-      char c = Serial.read();
+    while(CELL_SERIAL.available() > 0) {
+      char c = CELL_SERIAL.read();
       n+=c;
       delay(10);
     }
+	return n;
 }
 
 /* Gets the cell signal quality from the cell module
@@ -112,11 +159,20 @@ void CellComm::readSerial() {
  * See Ublox documentation on 'AT+CSQ' for more details
  */
 int CellComm::getCSQ() {
-	Serial.println("AT+CSQ");
-	int CSQ = Serial.parseInt();
-	while(Serial.available() > 0) {
-		Serial.read();
-		delay(5);
-	}
+	readSerial(); // Flushes the serial line
+	CELL_SERIAL.println("AT+CSQ");
+	int CSQ = CELL_SERIAL.parseInt();
+	readSerial();
 	return CSQ;
+}
+
+/* Counts the number of occurences of target in stringToSearch occuring at or after startingIndex.
+ */
+int CellComm::countOccurences(String stringToSearch, String target, int startingIndex)
+{
+	int indexOfKey = stringToSearch.indexOf(target, startingIndex);
+	if(indexOfKey < 0) // Base case; target is not in stringToSearch at or after startingIndex
+		return 0;
+	else // Reduction; return 1 for this occurence plus the number of occurences in the rest of the string
+		return (1 + countOccurences(stringToSearch, target, (indexOfKey + 1)));
 }

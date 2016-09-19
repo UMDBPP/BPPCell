@@ -1,33 +1,38 @@
 #include <SPI.h>
 #include <SD.h>
-#include <Wire.h>
+#include <I2C.h>
 #include <BPPCell.h>
 
 NMEAParser parser;
-CellComm comm;
+CellComm cellComm;
+GNSSComm gnssComm;
+
 
 unsigned long lastMillisOfMessage = 0;
 bool sendingMessages = true;
-long timeInterval = 300000; // In milliseconds; 300000 is 5 minutes
 const String number = ""; // put your cell number here, eg. number = "8001234567";
+long messageTimeInterval = 300000; // In milliseconds; 300000 is 5 minutes; defines how frequenty the program sends messages
+long shutdownTimeInterval = 18000000; // In milliseconds; 18000000 is 5 hours; defines after what period of time the program stops sending messages
+long startTime; // The start time of the program
 
 void setup() {
+    startTime = millis();
     Serial3.begin(9600); // Debug interface
-    comm.setup(); // Sets up the SARA-G350
-    String ss = parser.getGGAString(); // Gets the current gps coodinates
+    cellComm.setup(); // Sets up the SARA-G350
+    String ss = gnssComm.getGGAString(); // Gets the current gps coodinates
     GPSCoords coords = parser.parseCoords(ss);
     String s = coords.formatCoordsForText(2);
-    comm.sendMessage(number, s);
+    cellComm.sendMessage(number, s);
     const int chipSelect = 4; // pPn for SPI
     SD.begin(chipSelect); // 
 }
 
 void loop() {
     Serial3.println("\n");
-    String ggaString = parser.getGGAString();
+    String ggaString = gnssComm.getGGAString();
     GPSCoords coords = parser.parseCoords(ggaString);
     String coordsString = coords.formatCoordsForText(3);
-    int CSQ = comm.getCSQ();
+    int CSQ = cellComm.getCSQ();
 
     Serial3.println(coordsString);
 
@@ -49,8 +54,8 @@ void loop() {
        
     coordsString = coords.formatCoordsForText(2);
     
-    if((CSQ > 0 && (millis() - lastMillisOfMessage) > timeInterval)) {
-        comm.sendMessage(number, coordsString);
+    if((CSQ > 0 && (millis() - lastMillisOfMessage) > messageTimeInterval) && ((millis() - startTime) < shutdownTimeInterval) {
+        cellComm.sendMessage(number, coordsString);
         lastMillisOfMessage = millis();
     }
     dataFile.close();

@@ -40,28 +40,19 @@ GPSCoords NMEAParser::parseCoords(String GGAString)
     int NUMBER_OF_COMMAS = 14; // Number of commas in a GGA string
     int indicesOfCommas[NUMBER_OF_COMMAS];
     int lastCommaIndex = 0;
-
     for (int i = 0; i < NUMBER_OF_COMMAS; i++)
     {
         indicesOfCommas[i] = GGAString.indexOf(",", lastCommaIndex);
         lastCommaIndex = indicesOfCommas[i] + 1;
     }
-
     //The field goes from the index immediately following the first comma to the index immediately preceding the second comma
-    String time = GGAString.substring(indicesOfCommas[0] + 1,
-            indicesOfCommas[1]);
-    String latString = GGAString.substring(indicesOfCommas[1] + 1,
-            indicesOfCommas[2]);
-    String NSString = GGAString.substring(indicesOfCommas[2] + 1,
-            indicesOfCommas[3]);
-    String lonString = GGAString.substring(indicesOfCommas[3] + 1,
-            indicesOfCommas[4]);
-    String EWString = GGAString.substring(indicesOfCommas[4] + 1,
-            indicesOfCommas[5]);
-    String altString = GGAString.substring(indicesOfCommas[8] + 1,
-            indicesOfCommas[9]);
-    String geoString = GGAString.substring(indicesOfCommas[10] + 1,
-            indicesOfCommas[11]); // geoid separation
+    String time = GGAString.substring(indicesOfCommas[0] + 1, indicesOfCommas[1]);
+    String latString = GGAString.substring(indicesOfCommas[1] + 1, indicesOfCommas[2]);
+    String NSString = GGAString.substring(indicesOfCommas[2] + 1, indicesOfCommas[3]);
+    String lonString = GGAString.substring(indicesOfCommas[3] + 1, indicesOfCommas[4]);
+    String EWString = GGAString.substring(indicesOfCommas[4] + 1, indicesOfCommas[5]);
+    String altString = GGAString.substring(indicesOfCommas[8] + 1, indicesOfCommas[9]);
+    String geoString = GGAString.substring(indicesOfCommas[10] + 1, indicesOfCommas[11]); // geoid separation
 
     bool isNorth;
     if (NSString.equals("N"))
@@ -91,18 +82,13 @@ long NMEAParser::parseLatFromGGA(String latString, bool isNorth)
     int minutes = latString.substring(2, 4).toInt(); //Gets the integral minutes component of the latitude
     float decMinutes = latString.substring(4).toFloat(); //Gets the decimal minutes component of the latitude
     int NSMultiplier; //North-south multiplier indicates if the latitude is north or south, with positive values being north
-    int MINUTES_PER_DEGREE = 60;
-    const long TEN_THOUSANDTHS_PER_MINUTE = 10000;
-
     if (isNorth)
         NSMultiplier = 1;
     else
         NSMultiplier = -1;
-
-    return NSMultiplier
-            * (degrees * MINUTES_PER_DEGREE * TEN_THOUSANDTHS_PER_MINUTE
-                    + minutes * TEN_THOUSANDTHS_PER_MINUTE
-                    + ((long) (decMinutes * (TEN_THOUSANDTHS_PER_MINUTE))));
+    int MINUTES_PER_DEGREE = 60;
+    const long TEN_THOUSANDTHS_PER_MINUTE = 10000;
+    return NSMultiplier * (degrees * MINUTES_PER_DEGREE * TEN_THOUSANDTHS_PER_MINUTE + minutes * TEN_THOUSANDTHS_PER_MINUTE + ((long) (decMinutes * (TEN_THOUSANDTHS_PER_MINUTE))));
 }
 
 long NMEAParser::parseLonFromGGA(String lonString, bool isEast)
@@ -111,18 +97,13 @@ long NMEAParser::parseLonFromGGA(String lonString, bool isEast)
     int minutes = lonString.substring(3, 5).toInt(); //Gets the integral minutes component of the longitude
     float decMinutes = lonString.substring(5).toFloat(); //Gets the decimal minutes component of the longitude
     int EWMultiplier; //East-west multiplier indicates if the longitude is east or west, with positive values being east
-    int MINUTES_PER_DEGREE = 60;
-    const long TEN_THOUSANDTHS_PER_MINUTE = 10000;
-
     if (isEast)
         EWMultiplier = 1;
     else
         EWMultiplier = -1;
-
-    return EWMultiplier
-            * (degrees * MINUTES_PER_DEGREE * TEN_THOUSANDTHS_PER_MINUTE
-                    + minutes * TEN_THOUSANDTHS_PER_MINUTE
-                    + ((long) (decMinutes * (TEN_THOUSANDTHS_PER_MINUTE))));
+    int MINUTES_PER_DEGREE = 60;
+    const long TEN_THOUSANDTHS_PER_MINUTE = 10000;
+    return EWMultiplier * (degrees * MINUTES_PER_DEGREE * TEN_THOUSANDTHS_PER_MINUTE + minutes * TEN_THOUSANDTHS_PER_MINUTE + ((long) (decMinutes * (TEN_THOUSANDTHS_PER_MINUTE))));
 }
 
 
